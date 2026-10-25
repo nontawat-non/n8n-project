@@ -1,0 +1,99 @@
+{
+  "name": "My workflow ข้อความตอบกลับ",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {}
+          ]
+        },
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw",
+          "mode": "list",
+          "cachedResultName": "SkinCare_Automation_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1733221880,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit#gid=1733221880"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ef8eb5e9-50c2-4b7e-89c8-12b281dcde96",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"to\": $json['LINE User ID'] || $json['entry.1746955900'] || $json['userId'] || \"\",\n    \"messages\": [\n      {\n        \"type\": \"text\",\n        \"text\": `🎉 บันทึกประวัติผิวของคุณ ${$json['ชื่อ-นามสกุล หรือ ชื่อเล่น'] || $json['ชื่อ'] || 'ลูกค้า'} เรียบร้อยแล้วค่ะ!\\n\\nระบบพร้อมวิเคราะห์สภาพอากาศและจัดรูทีนสกินแคร์ให้คุณแล้ว สามารถเลือกกดปุ่มบริการด้านล่างได้เลยค่ะ 👇`,\n        \"quickReply\": {\n          \"items\": [\n            {\n              \"type\": \"action\",\n              \"action\": { \"type\": \"message\", \"label\": \"🌿 ประเมินความเสี่ยงผิว\", \"text\": \"รายงานสภาพผิว\" }\n            },\n            {\n              \"type\": \"action\",\n              \"action\": { \"type\": \"message\", \"label\": \"🧪 ขอคำแนะนำสกินแคร์\", \"text\": \"ขอคำแนะนำสกินแคร์\" }\n            },\n            {\n              \"type\": \"action\",\n              \"action\": { \"type\": \"message\", \"label\": \"📊 ดูแดชบอร์ดประวัติผิว\", \"text\": \"ดูแดชบอร์ดประวัติผิว\" }\n            }\n          ]\n        }\n      }\n    ]\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f387dcca-1c0b-4830-b937-a8e45d9b0dbb",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ca6eb846-c36c-4630-a114-158d12095f74",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e75834c59b209709c948ea06b7738eb7a2c91085970f371d4bf8179f6f71aba6"
+  },
+  "nodeGroups": [],
+  "id": "02HLtx6wL5wU5iC8",
+  "tags": []
+}

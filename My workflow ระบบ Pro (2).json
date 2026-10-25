@@ -1,0 +1,1558 @@
+{
+  "name": "My workflow ระบบ Pro",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -464,
+        -32
+      ],
+      "id": "4ee40684-9b42-44a2-8b1c-4c4bcab975b8",
+      "name": "LINE Webhook",
+      "webhookId": "d2c8e05c-1137-4203-b649-3698c4241a53"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea3f62b4-fd19-40b4-818a-5d25b02f24cc",
+              "name": "userId",
+              "value": "={{ $json.body?.events?.[0]?.source?.userId || $json.events?.[0]?.source?.userId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -224,
+        -32
+      ],
+      "id": "41ef2270-539e-4a85-b656-db513fdc70dd",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw",
+          "mode": "list",
+          "cachedResultName": "SkinCare_Automation_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1733221880,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit#gid=1733221880"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "  LINE User ID  ",
+              "lookupValue": "={{ $json.userId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        48,
+        -32
+      ],
+      "id": "8d3088ad-f889-4013-aa6b-7b07a6f327bd",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "654606e1-dee3-46d2-9059-9e35f8342a52",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        272,
+        -32
+      ],
+      "id": "c87fe1e5-3a66-4c40-bde4-a2757a513a67",
+      "name": "User Exists?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  (() => {\n    // 1. ดึง replyToken หรือ userId แบบป้องกัน Error ข้ามสายงาน\n    let replyToken = null;\n    try {\n      replyToken = $('LINE Webhook').first()?.json?.body?.events?.[0]?.replyToken;\n    } catch (e) {\n      replyToken = null;\n    }\n\n    let userId = \"\";\n    try {\n      userId = $(\"Code in JavaScript\").first()?.json?.userId \n            || $(\"Code in JavaScript1\").first()?.json?.userId \n            || $json.userId \n            || \"\";\n    } catch (e) {\n      userId = $json.userId || \"\";\n    }\n\n    // 2. ดึงข้อมูลสภาพแวดล้อมและผล SERI จากโหนด Prepare AI Data\n    let prepData = {};\n    try {\n      prepData = $('Prepare AI Data').first()?.json || $json || {};\n    } catch (e) {\n      prepData = $json || {};\n    }\n\n    // 3. ดึงข้อความวิเคราะห์จาก AI (รองรับทั้ง Message a model4 และ Message a model)\n    let aiResponseText = \"ไม่มีข้อมูลคำแนะนำ\";\n    try {\n      aiResponseText = $json.text \n        || $json.content?.parts?.[0]?.text \n        || $(\"Message a model4\").first()?.json?.text \n        || $(\"Message a model4\").first()?.json?.content?.parts?.[0]?.text\n        || $(\"Message a model\").first()?.json?.text\n        || \"ไม่มีข้อมูลคำแนะนำ\";\n    } catch (e) {\n      aiResponseText = $json.text || \"ไม่มีข้อมูลคำแนะนำ\";\n    }\n\n    // 4. คำนวณสีแถบ Header ตามระดับความเสี่ยง SERI\n    let headerBgColor = \"#00B900\"; // เขียว (ต่ำ)\n    if (String(prepData.seriRiskLevel).includes('สูงมาก')) headerBgColor = \"#D32F2F\"; // แดง\n    else if (String(prepData.seriRiskLevel).includes('สูง')) headerBgColor = \"#E65100\"; // ส้ม\n    else if (String(prepData.seriRiskLevel).includes('ปานกลาง')) headerBgColor = \"#F57F17\"; // เหลืองส้ม\n\n    // 5. โครงสร้าง LINE Flex Message Card\n    const flexCard = {\n      \"type\": \"flex\",\n      \"altText\": `🌿 รายงานสุขภาพผิว (${prepData.locationName || 'สภาพอากาศวันนี้'})`,\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": headerBgColor,\n          \"paddingAll\": \"15px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"ENVIRONMENTAL SKIN ASSESSMENT\",\n              \"color\": \"#FFFFFF\",\n              \"weight\": \"bold\",\n              \"size\": \"xxs\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": `${prepData.seriRiskBadge || '🟢'} ความเสี่ยงผิว: ${prepData.seriRiskLevel || 'ปกติ'} (${prepData.seriScore || 0}/100)`,\n              \"color\": \"#FFFFFF\",\n              \"weight\": \"bold\",\n              \"size\": \"md\",\n              \"margin\": \"xs\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": `📍 ${prepData.locationName || 'พื้นที่ของคุณ'} | เวลา ${prepData.currentTimeStr || ''}`,\n              \"color\": \"#FFFFFFEE\",\n              \"size\": \"xs\",\n              \"margin\": \"xs\"\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"sm\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"🌡️ อุณหภูมิ\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.temp || 0}°C`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"☀️ ดัชนี UV\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.uvIndex || 0}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"😷 PM2.5\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.pm25 || 0}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                }\n              ]\n            },\n            { \"type\": \"separator\", \"margin\": \"md\" },\n            {\n              \"type\": \"text\",\n              \"text\": \"🧬 การวิเคราะห์และคำแนะนำสกินแคร์\",\n              \"weight\": \"bold\",\n              \"size\": \"xs\",\n              \"color\": \"#111111\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": String(aiResponseText),\n              \"wrap\": true,\n              \"size\": \"xs\",\n              \"color\": \"#444444\"\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"10px\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"secondary\",\n              \"height\": \"sm\",\n              \"action\": {\n                \"type\": \"message\",\n                \"label\": \"🧪 ขอคำแนะนำสกินแคร์รูทีน\",\n                \"text\": \"ขอแนะนำสกินแคร์รูทีน\"\n              }\n            }\n          ]\n        }\n      }\n    };\n\n    const messageList = [flexCard];\n\n    // 6. ส่งแบบ Reply หรือ Push ตามเงื่อนไข\n    return replyToken\n      ? { \"replyToken\": replyToken, \"messages\": messageList }\n      : { \"to\": userId, \"messages\": messageList };\n  })()\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2384,
+        -400
+      ],
+      "id": "74e60320-c167-4dce-b9df-4421f4d351fd",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=คุณคือ AI ผู้เชี่ยวชาญด้านสภาพอากาศและสุขภาพผิวพรรณ จงสร้างรายงานตามข้อมูลสภาพแวดล้อมที่ได้รับจริงดังนี้:\n\n[กฎเหล็กในการตอบ]\n1. เวลาปัจจุบันคือ {{ $json.currentTimeStr }} ห้ามเปลี่ยนแปลงตัวเลขเวลาเด็ดขาด\n2. ส่วนพยากรณ์รายชั่วโมงให้แสดงข้อมูลจาก {{ $json.hourlyDetailText }} ห้ามตัดออก\n\n[โครงสร้างคำตอบที่ต้องใช้ส่งกลับ]\nรายงานสภาพแวดล้อม {{ $json.locationName }} ณ เวลา {{ $json.currentTimeStr }}\n\n• อุณหภูมิ: {{ $json.temp }} °C\n• รังสี UV Index: {{ $json.uvIndex }}\n• ฝุ่น PM2.5: {{ $json.pm25 }} µg/m³\n• ความชื้นสัมพัทธ์: {{ $json.humidity }}%\n\n🌧️ พยากรณ์อากาศและแนวโน้มฝน 3–4 ชั่วโมงข้างหน้า\n• แนวโน้ม: {{ $json.rainForecast4hText }}\n• รายละเอียดรายชั่วโมง:\n• {{ $json.hourlyDetailText }}\n\n🔬 การประเมินความเสี่ยงต่อสุขภาพผิว\n• ความเสี่ยงจาก UV / Photo Damage: [วิเคราะห์ความเสี่ยงจากค่า {{ $json.uvIndex }} สั้นๆ]\n• ความเสี่ยงจากความร้อน เหงื่อ และความชื้น: [วิเคราะห์จากอุณหภูมิ {{ $json.temp }}°C และความชื้น {{ $json.humidity }}% สั้นๆ]\n• ความเสี่ยงจาก PM2.5 และมลภาวะ: [วิเคราะห์จากค่าฝุ่น {{ $json.pm25 }} µg/m³ สั้นๆ]\n[ผลการประเมินความเสี่ยงด้วย SERI Algorithm]\n• ดัชนีความเสี่ยงผิว (SERI Score): {{ $json.seriScore }}/100\n• ระดับความเสี่ยง: {{ $json.seriRiskLevel }} {{$json.seriRiskBadge }}\n(จงนำค่า SERI Score นี้ไปประเมินและอธิบายให้ผู้ใช้อย่างถูกต้อง)\n🧬 การวิเคราะห์ผลกระทบต่อ Skin Barrier\n[อธิบายผลกระทบต่อเกราะป้องกันผิว 2-3 บรรทัด]\n\n⚠️ ข้อควรระวัง\nคำแนะนำนี้เป็นข้อมูลเพื่อการดูแลสุขภาพผิวจากสภาพแวดล้อม ไม่ใช่การวินิจฉัยหรือการรักษาโรค"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        2048,
+        -400
+      ],
+      "id": "4adab880-c00b-408d-be63-bb7da87d4d56",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "maxTries": 3,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yoNrsFnCBUoKDSra",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ฟังก์ชันดึงข้อมูลจากโหนดอย่างปลอดภัย (ป้องกัน Workflow ล่มหากโหนดไม่ได้ถูกรัน)\nfunction getSafeNodeData(nodeNames) {\n  for (const name of nodeNames) {\n    try {\n      const item = $(name).first();\n      if (item && item.json && Object.keys(item.json).length > 0) {\n        return item.json;\n      }\n    } catch (e) {\n      // ข้ามกรณีโหนดไม่ได้รันในสายงานนี้\n    }\n  }\n  return {};\n}\n\n// 1. ดึงข้อความที่ผู้ใช้พิมพ์ส่งมาจาก LINE Webhook\nlet userMessage = '';\ntry {\n  userMessage = $('LINE Webhook').first()?.json?.body?.events?.[0]?.message?.text || '';\n} catch(e) {}\n\n// 2. ดึงเวลาเริ่มจับเวลา (startTime) จาก Edit Fields\nlet startTime = Date.now();\ntry {\n  startTime = $('Edit Fields').first()?.json?.startTime || Date.now();\n} catch(e) {}\n\n// 3. ดึงข้อมูลจากโหนดต่างๆ\nconst sheetData = getSafeNodeData(['Get row(s) in sheet', 'Get row(s) in sheet1']);\nconst userProfile = getSafeNodeData(['Code in JavaScript', 'Code in JavaScript1']);\nconst weatherData = getSafeNodeData(['Get Weather', 'Get Weather1']);\nconst airData = getSafeNodeData(['Get Air Quality', 'Get Air Quality1']);\n\n// 4. ดึง userId\nconst userId = sheetData['LINE User ID'] \n  || sheetData['userId'] \n  || sheetData['User ID'] \n  || sheetData['user_id'] \n  || userProfile['userId'] \n  || userProfile['LINE User ID'] \n  || userProfile['user_id'] \n  || '';\n\n// 5. ชื่อจังหวัด\nconst provinceName = userProfile.province || sheetData['จังหวัด'] || 'มหาสารคาม';\n\n// 6. สภาพอากาศ ณ เวลาปัจจุบัน (คำนวณปัดเศษสำหรับใช้งาน)\nconst currentTemp = Math.round(weatherData.current?.temperature_2m ?? 30);\nconst currentHumidity = Math.round(weatherData.current?.relative_humidity_2m ?? 65);\n\n// 7. คำนวณวัน/เดือน/ปี และเวลาปัจจุบัน (Asia/Bangkok)\nconst now = new Date();\nconst datePart = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);\nconst bangkokDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok' }).format(now);\nconst bangkokHourStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', hourCycle: 'h23' }).format(now);\nconst bangkokMinuteStr = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', minute: '2-digit' }).format(now);\nconst secondsStr = String(now.getSeconds()).padStart(2, '0');\n\nconst currentHourNum = parseInt(bangkokHourStr, 10);\nconst currentTimeStr = `${String(currentHourNum).padStart(2, '0')}:${String(bangkokMinuteStr).padStart(2, '0')} น.`;\nconst fullTimestamp = `${datePart} ${String(currentHourNum).padStart(2, '0')}:${String(bangkokMinuteStr).padStart(2, '0')}:${secondsStr}`;\n\n// 8. พยากรณ์รายชั่วโมง (Hourly Forecast) 3-4 ชั่วโมงข้างหน้า\nconst hourlyTimes = weatherData.hourly?.time || [];\nconst hourlyPrecipProb = weatherData.hourly?.precipitation_probability || [];\nconst hourlyTemp = weatherData.hourly?.temperature_2m || [];\n\nconst targetTimePrefix = `${bangkokDateStr}T${String(currentHourNum).padStart(2, '0')}`;\nlet currentIndex = hourlyTimes.findIndex(t => t.startsWith(targetTimePrefix));\n\nif (currentIndex === -1 && hourlyTimes.length > 0) {\n  currentIndex = hourlyTimes.findIndex(t => {\n    const hour = parseInt(t.split('T')[1]?.split(':')[0] || '0', 10);\n    return hour >= currentHourNum;\n  });\n  if (currentIndex === -1) currentIndex = 0;\n}\n\nconst next4HoursList = [];\nlet maxRainProb4h = 0;\n\nfor (let i = 1; i <= 4; i++) {\n  const targetIndex = currentIndex + i;\n  if (targetIndex < hourlyTimes.length) {\n    const timeLabel = hourlyTimes[targetIndex].split('T')[1]?.slice(0, 5) || '';\n    const prob = Math.round(hourlyPrecipProb[targetIndex] ?? 0);\n    const temp = Math.round(hourlyTemp[targetIndex] ?? currentTemp);\n\n    if (prob > maxRainProb4h) maxRainProb4h = prob;\n    next4HoursList.push(`${timeLabel}น. (${temp}°C, ฝน ${prob}%)`);\n  }\n}\n\n// สรุปแนวโน้มฝนตก\nlet rainForecast4hText = '';\nif (maxRainProb4h >= 70) {\n  rainForecast4hText = `⚠️ เฝ้าระวังฝนตกหนัก: อีก 3-4 ชม. ข้างหน้า มีโอกาสฝนตกสูงถึง ${maxRainProb4h}%`;\n} else if (maxRainProb4h >= 40) {\n  rainForecast4hText = `🌥️ มีโอกาสฝนตกปานกลาง (${maxRainProb4h}%) ในช่วง 3-4 ชม. ข้างหน้า`;\n} else {\n  rainForecast4hText = `☀️ สภาพอากาศปกติ โอกาสฝนตกต่ำ (${maxRainProb4h}%) ในช่วง 3-4 ชม. ข้างหน้า`;\n}\n\n// 9. มลภาวะและ UV\nconst uvIndex = airData.current?.uv_index ?? 0;\nconst pm25 = airData.current?.pm2_5 ?? 0;\n\n// =========================================================================\n// 🔬 9.1 Algorithmic Scoring Model: Skin Environmental Risk Index (SERI)\n// =========================================================================\nfunction calculateSERI(uv, pm25Val, temp, humidity, skinTypeStr, sensitiveStr) {\n  const uvScore = Math.min((uv / 11) * 40, 40);\n  const pm25Score = Math.min((pm25Val / 50) * 30, 30);\n\n  let tempScore = 4;\n  if (temp >= 35) tempScore = 15;\n  else if (temp >= 32) tempScore = 12;\n  else if (temp >= 28) tempScore = 8;\n\n  let humiScore = 5;\n  if (humidity > 80 || humidity < 35) humiScore = 15;\n  else if (humidity > 70 || humidity < 45) humiScore = 10;\n\n  const climateScore = tempScore + humiScore;\n  let baseScore = uvScore + pm25Score + climateScore;\n\n  let multiplier = 1.0;\n  const combinedSkin = `${skinTypeStr} ${sensitiveStr}`.toLowerCase();\n  if (combinedSkin.includes('แพ้ง่าย') || combinedSkin.includes('sensitive') || combinedSkin.includes('บอบบาง')) {\n    multiplier = 1.20;\n  } else if (combinedSkin.includes('แห้ง') || combinedSkin.includes('dry')) {\n    multiplier = 1.10;\n  }\n\n  const finalSeriScore = Math.min(100, Math.round(baseScore * multiplier));\n\n  let riskLevel = 'ต่ำ';\n  let riskBadge = '🟢';\n  if (finalSeriScore >= 81) {\n    riskLevel = 'สูงมาก';\n    riskBadge = '🔴';\n  } else if (finalSeriScore >= 61) {\n    riskLevel = 'สูง';\n    riskBadge = '🟠';\n  } else if (finalSeriScore >= 31) {\n    riskLevel = 'ปานกลาง';\n    riskBadge = '🟡';\n  }\n\n  return {\n    seriScore: finalSeriScore,\n    seriRiskLevel: riskLevel,\n    seriRiskBadge: riskBadge,\n    uvSubScore: Math.round(uvScore),\n    pm25SubScore: Math.round(pm25Score),\n    climateSubScore: Math.round(climateScore)\n  };\n}\n\nconst skinTypeVal = sheetData['สภาพผิว'] || 'ธรรมดา';\nconst isSensitiveVal = sheetData['สุขภาพผิว'] || 'แข็งแรง';\nconst seriResult = calculateSERI(uvIndex, pm25, currentTemp, currentHumidity, skinTypeVal, isSensitiveVal);\n\n// =========================================================================\n// 🛡️ 10. Input Validation & Intent Classification System (ปรับปรุงใหม่)\n// =========================================================================\nconst cleanMsg = userMessage.trim().toLowerCase();\n\n// 1. แดชบอร์ด (ตรวจก่อนเพื่อน เพื่อไม่ให้คำว่า \"ผิว\" ไปชนโหมดอื่น)\nconst isDashboardMsg = ['แดชบอร์ด', 'ประวัติ', 'สถิติ', 'สรุปผิว', 'dashboard', 'history', 'stats', 'โปรไฟล์'].some(k => cleanMsg.includes(k));\n\n// 2. เช็คสภาพอากาศอย่างเดียว\nconst isWeatherMsg = ['อากาศ', 'ฝน', 'พยากรณ์', 'เช็คสภาพอากาศ', 'อุณหภูมิ', 'ฝุ่น', 'pm2.5', 'pm25', 'uv', 'แดด'].some(k => cleanMsg.includes(k));\n\n// 3. สกินแคร์รูทีน (เอาคำว่า \"ผิว\" และ \"แนะนำ\" ออกจากคีย์เวิร์ด เพื่อไม่ให้ชนโหมดรายงาน)\nconst isRoutineMsg = ['รูทีน', 'สกินแคร์', 'ครีม', 'เซรั่ม', 'บำรุง', 'แต่งหน้า', 'ล้างหน้า', 'มอยเจอร์', 'กันแดด', 'ขั้นตอน'].some(k => cleanMsg.includes(k));\n\n// 4. รายงานสภาพผิว / ประเมินความเสี่ยงรายวัน\nconst isAlertMsg = ['รายงาน', 'วิเคราะห์', 'เตือน', 'ประเมิน', 'สภาพผิว', 'ผิว', 'สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'เริ่ม', 'เริ่มต้น', 'พร้อม', 'ช่วยเหลือ', 'ทำอะไรได้บ้าง'].some(k => cleanMsg.includes(k));\n\nlet systemMode = 'OUT_OF_SCOPE';\nlet periodName = '';\nlet fallbackText = '';\n\n// จัดลำดับความสำคัญ (Priority Order)\nif (isDashboardMsg) {\n  systemMode = 'USER_DASHBOARD';\n  periodName = 'แดชบอร์ดประวัติและสถิติสุขภาพผิวส่วนบุคคล';\n} else if (isWeatherMsg) {\n  systemMode = 'WEATHER_ONLY';\n  periodName = 'รายงานสภาพอากาศและพยากรณ์ฝนล่วงหน้า';\n} else if (isRoutineMsg) {\n  systemMode = 'ROUTINE';\n  periodName = 'คำแนะนำสกินแคร์รูทีนเฉพาะบุคคล';\n} else if (isAlertMsg || cleanMsg.length === 0) {\n  systemMode = 'DAY_ALERT';\n  periodName = 'วิเคราะห์สภาพอากาศและวิเคราะห์ปัญหาผิว';\n} else {\n  systemMode = 'OUT_OF_SCOPE';\n  periodName = 'ข้อความนอกขอบเขตบริการ';\n  fallbackText = `ขออภัยครับ 🙏 ระบบ AI รองรับเฉพาะการประเมินสภาพอากาศ ความเสี่ยงสิ่งแวดล้อมต่อผิว และคำแนะนำสกินแคร์เท่านั้นครับ\\n\\nลองพิมพ์คำสั่งเหล่านี้ได้เลยครับ:\\n• \"เช็คสภาพอากาศ\" - ตรวจสภาพอากาศ UV และ PM2.5\\n• \"ขอคำแนะนำสกินแคร์\" - ดูลำดับรูทีนบำรุงผิว\\n• \"ดูแดชบอร์ดประวัติผิว\" - ดูแดชบอร์ดสถิติส่วนบุคคล`;\n}\n\n// 11. คืนค่าออกไปท้ายโค้ด\nreturn [{\n  json: {\n    raw_weather_time: weatherData.current?.time || '',\n    raw_air_time: airData.current?.time || '',\n    raw_temp: weatherData.current?.temperature_2m ?? null,\n    raw_humidity: weatherData.current?.relative_humidity_2m ?? null,\n    raw_rain: weatherData.current?.rain ?? 0,\n    raw_rain_prob: weatherData.current?.precipitation_probability ?? 0,\n    raw_uv: airData.current?.uv_index ?? null,\n    raw_pm25: airData.current?.pm2_5 ?? null,\n\n    timestamp: fullTimestamp,\n    startTime: startTime,\n    userId: userId,\n    userMessage: userMessage,\n    name: sheetData['ชื่อ-นามสกุล หรือ ชื่อเล่น'] || sheetData['ชื่อ'] || userProfile.name || 'คุณลูกค้า',\n    locationName: provinceName,\n    skinType: skinTypeVal,\n    allergies: sheetData['แพ้น้ำหอมหรือไม่'] || 'ไม่แพ้',\n    isSensitive: isSensitiveVal,\n\n    temp: currentTemp,\n    humidity: currentHumidity,\n    uvIndex: Math.round(uvIndex * 10) / 10,\n    pm25: Math.round(pm25 * 10) / 10,\n\n    seriScore: seriResult.seriScore,\n    seriRiskLevel: seriResult.seriRiskLevel,\n    seriRiskBadge: seriResult.seriRiskBadge,\n    uvSubScore: seriResult.uvSubScore,\n    pm25SubScore: seriResult.pm25SubScore,\n    climateSubScore: seriResult.climateSubScore,\n\n    next4HoursDetail: next4HoursList.join(', '),\n    maxRainProb4h: `${maxRainProb4h}%`,\n    rainForecast4hText: rainForecast4hText,\n\n    currentTimeStr: currentTimeStr,\n    periodName: periodName,\n    systemMode: systemMode,\n    fallbackText: fallbackText\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        -368
+      ],
+      "id": "e8c9721d-9f20-4c3c-bdb4-61341a28a10d",
+      "name": "Prepare AI Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"replyToken\": \"{{ $node['LINE Webhook'].json.body.events[0].replyToken }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"✨ ยินดีต้อนรับสู่ SUN & SKIN ค่ะ! ✨\\n\\nเพื่อการประเมินดัชนีความเสี่ยงผิว (SERI Score) และการจัดรูทีนสกินแคร์ที่แม่นยำเฉพาะบุคคล รบกวนลงทะเบียนประวัติผิวสั้นๆ (ใช้เวลาเพียง 1 นาที) ก่อนเริ่มต้นใช้งานนะคะ 👇\\n\\n📝 ลิงก์ลงทะเบียนประวัติผิว:\\nhttps://docs.google.com/forms/d/e/1FAIpQLSdfom3z8XiZbICrSDuG0qzCsphe2axU4QHU6bw5iYL1Y9-Tyg/viewform?usp=pp_url&entry.1746955900={{ $node['LINE Webhook'].json.body.events[0].source.userId }}\\n\\n💡 เมื่อกรอกเสร็จเรียบร้อยแล้ว ให้สลับกลับมาที่หน้าแชต LINE แล้วกดปุ่ม \\\"🌿 ประเมินความเสี่ยงผิว\\\" บนเมนูด้านล่างเพื่อเริ่มใช้งานได้ทันทีเลยค่ะ!\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        576,
+        224
+      ],
+      "id": "cb15d53f-fe0b-4694-9dac-9926ecb79230",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{ $node['Code in JavaScript'].json.lat }}&longitude={{ $node['Code in JavaScript'].json.lon }}&current=temperature_2m,relative_humidity_2m,weather_code,rain,precipitation_probability&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,rain,weather_code&daily=precipitation_probability_max,rain_sum&timezone=Asia%2FBangkok&forecast_days=2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-skincare-bot/1.0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        736,
+        -80
+      ],
+      "id": "124e1cf5-05c8-4f34-a198-de5daedc86f3",
+      "name": "Get Weather"
+    },
+    {
+      "parameters": {
+        "url": "=https://air-quality-api.open-meteo.com/v1/air-quality?latitude={{ $('Code in JavaScript').item.json.lat }}&longitude={{ $('Code in JavaScript').item.json.lon }}&current=pm2_5,uv_index&timezone=Asia/Bangkok",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-skincare-bot/1.0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        -80
+      ],
+      "id": "73b7ff49-a760-4f08-aa88-3bee2ecdff41",
+      "name": "Get Air Quality"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ดึงข้อมูลจากโหนด Get row(s) in sheet\nconst sheetData = $input.first() ? $input.first().json : {};\nconst rawProvince = sheetData['จังหวัด'] || sheetData['province'] || 'มหาสารคาม';\n\n// ตัดคำนำหน้า \"จังหวัด\" หรือ \"จ.\"\nconst cleanProvince = rawProvince.toString().replace(/^(จังหวัด|จ\\.)\\s*/, '').trim();\n\n// ฐานข้อมูลพิกัด 77 จังหวัด\nconst provinceCoords = {\n  \"กรุงเทพมหานคร\": { lat: 13.7563, lon: 100.5018 },\n  \"กระบี่\": { lat: 8.0863, lon: 98.9063 },\n  \"กาญจนบุรี\": { lat: 14.0228, lon: 99.5328 },\n  \"กาฬสินธุ์\": { lat: 16.4322, lon: 103.5061 },\n  \"กำแพงเพชร\": { lat: 16.4828, lon: 99.5228 },\n  \"ขอนแก่น\": { lat: 16.4419, lon: 102.8360 },\n  \"จันทบุรี\": { lat: 12.6114, lon: 102.1039 },\n  \"ฉะเชิงเทรา\": { lat: 13.6904, lon: 101.0780 },\n  \"ชลบุรี\": { lat: 13.3611, lon: 100.9847 },\n  \"ชัยนาท\": { lat: 15.1852, lon: 100.1251 },\n  \"ชัยภูมิ\": { lat: 15.8068, lon: 102.0315 },\n  \"ชุมพร\": { lat: 10.4930, lon: 99.1800 },\n  \"เชียงราย\": { lat: 19.9105, lon: 99.8406 },\n  \"เชียงใหม่\": { lat: 18.7883, lon: 98.9853 },\n  \"ตรัง\": { lat: 7.5563, lon: 99.6114 },\n  \"ตราด\": { lat: 12.2428, lon: 102.5175 },\n  \"ตาก\": { lat: 16.8839, lon: 99.1258 },\n  \"นครนายก\": { lat: 14.2069, lon: 101.2131 },\n  \"นครปฐม\": { lat: 13.8196, lon: 100.0622 },\n  \"นครพนม\": { lat: 17.3920, lon: 104.7696 },\n  \"นครราชสีมา\": { lat: 14.9799, lon: 102.0978 },\n  \"นครศรีธรรมราช\": { lat: 8.4304, lon: 99.9631 },\n  \"นครสวรรค์\": { lat: 15.7051, lon: 100.1378 },\n  \"นนทบุรี\": { lat: 13.8591, lon: 100.5217 },\n  \"นราธิวาส\": { lat: 6.4255, lon: 101.8253 },\n  \"น่าน\": { lat: 18.7838, lon: 100.7782 },\n  \"บึงกาฬ\": { lat: 18.3609, lon: 103.6520 },\n  \"บุรีรัมย์\": { lat: 14.9930, lon: 103.1029 },\n  \"ปทุมธานี\": { lat: 14.0208, lon: 100.5250 },\n  \"ประจวบคีรีขันธ์\": { lat: 11.8124, lon: 99.7973 },\n  \"ปราจีนบุรี\": { lat: 14.0509, lon: 101.3717 },\n  \"ปัตตานี\": { lat: 6.8663, lon: 101.2501 },\n  \"พระนครศรีอยุธยา\": { lat: 14.3532, lon: 100.5684 },\n  \"พะเยา\": { lat: 19.1658, lon: 99.9022 },\n  \"พังงา\": { lat: 8.4501, lon: 98.5255 },\n  \"พัทลุง\": { lat: 7.6167, lon: 100.0740 },\n  \"พิจิตร\": { lat: 16.4421, lon: 100.3482 },\n  \"พิษณุโลก\": { lat: 16.8211, lon: 100.2659 },\n  \"เพชรบุรี\": { lat: 13.1119, lon: 99.9397 },\n  \"เพชรบูรณ์\": { lat: 16.4190, lon: 101.1560 },\n  \"แพร่\": { lat: 18.1446, lon: 100.1403 },\n  \"ภูเก็ต\": { lat: 7.8804, lon: 98.3923 },\n  \"มหาสารคาม\": { lat: 16.1848, lon: 103.3007 },\n  \"มุกดาหาร\": { lat: 16.5453, lon: 104.7236 },\n  \"แม่ฮ่องสอน\": { lat: 19.3020, lon: 97.9654 },\n  \"ยโสธร\": { lat: 15.7924, lon: 104.1453 },\n  \"ยะลา\": { lat: 6.5411, lon: 101.2804 },\n  \"ร้อยเอ็ด\": { lat: 16.0538, lon: 103.6520 },\n  \"ระนอง\": { lat: 9.9658, lon: 98.6348 },\n  \"ระยอง\": { lat: 12.6814, lon: 101.2816 },\n  \"ราชบุรี\": { lat: 13.5373, lon: 99.8164 },\n  \"ลพบุรี\": { lat: 14.7995, lon: 100.6534 },\n  \"ลำปาง\": { lat: 18.2888, lon: 99.4923 },\n  \"ลำพูน\": { lat: 18.5745, lon: 99.0087 },\n  \"เลย\": { lat: 17.4860, lon: 101.7223 },\n  \"ศรีสะเกษ\": { lat: 15.1186, lon: 104.3220 },\n  \"สกลนคร\": { lat: 17.1664, lon: 104.1486 },\n  \"สงขลา\": { lat: 7.1898, lon: 100.5954 },\n  \"สตูล\": { lat: 6.6238, lon: 100.0674 },\n  \"สมุทรปราการ\": { lat: 13.5991, lon: 100.5968 },\n  \"สมุทรสงคราม\": { lat: 13.4098, lon: 100.0023 },\n  \"สมุทรสาคร\": { lat: 13.5475, lon: 100.2744 },\n  \"สระแก้ว\": { lat: 13.8140, lon: 102.0712 },\n  \"สระบุรี\": { lat: 14.5289, lon: 100.9108 },\n  \"สิงห์บุรี\": { lat: 14.8936, lon: 100.4029 },\n  \"สุโขทัย\": { lat: 17.0056, lon: 99.8264 },\n  \"สุพรรณบุรี\": { lat: 14.4745, lon: 100.1177 },\n  \"สุราษฎร์ธานี\": { lat: 9.1382, lon: 99.3217 },\n  \"สุรินทร์\": { lat: 14.8818, lon: 103.4936 },\n  \"หนองคาย\": { lat: 17.8783, lon: 102.7420 },\n  \"หนองบัวลำภู\": { lat: 17.2038, lon: 102.4410 },\n  \"อ่างทอง\": { lat: 14.5896, lon: 100.4550 },\n  \"อุดรธานี\": { lat: 17.4138, lon: 102.7872 },\n  \"อุทัยธานี\": { lat: 15.3831, lon: 100.0247 },\n  \"อุตรดิตถ์\": { lat: 17.6201, lon: 100.0993 },\n  \"อุบลราชธานี\": { lat: 15.2448, lon: 104.8473 },\n  \"อำนาจเจริญ\": { lat: 15.8582, lon: 104.6258 }\n};\n\nconst coords = provinceCoords[cleanProvince] || provinceCoords[\"มหาสารคาม\"];\n\nreturn [{\n  json: {\n    ...sheetData,\n    lat: coords.lat,\n    lon: coords.lon,\n    province: cleanProvince\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        -352
+      ],
+      "id": "cfc8f65a-487a-43b9-9d58-bc5ae86e7d63",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6c6242e9-5791-44f8-9234-c7a4fa91265c",
+                    "leftValue": "={{ $json.systemMode }}",
+                    "rightValue": "USER_DASHBOARD",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "USER_DASHBOARD"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "eca31e74-e4e4-4559-b77c-e601c7e13602",
+                    "leftValue": "={{ $json.systemMode }}",
+                    "rightValue": "DAY_ALERT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DAY_ALERT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f49a6df1-b41e-4268-9017-048048ea0518",
+                    "leftValue": "={{ $json.systemMode }}",
+                    "rightValue": "ROUTINE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ROUTINE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6e888d3b-0fb1-4bce-8a42-7b016b0d25ef",
+                    "leftValue": "={{ $json.systemMode }}",
+                    "rightValue": "WEATHER_ONLY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WEATHER_ONLY"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9e512589-dd64-43b7-b581-c7e9c6840f9b",
+                    "leftValue": "={{ $json.systemMode }}",
+                    "rightValue": "OUT_OF_SCOPE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "OUT_OF_SCOPE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1632,
+        -304
+      ],
+      "id": "ced4aa15-d2a3-47f3-811f-0a2dd25c81e3",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  (() => {\n    // 1. ดึง replyToken หรือ userId แบบป้องกัน Error ข้ามสายงาน\n    let replyToken = null;\n    try {\n      replyToken = $('LINE Webhook').first()?.json?.body?.events?.[0]?.replyToken;\n    } catch (e) {\n      replyToken = null;\n    }\n\n    let userId = \"\";\n    try {\n      userId = $(\"Code in JavaScript\").first()?.json?.userId \n            || $(\"Code in JavaScript1\").first()?.json?.userId \n            || $json.userId \n            || \"\";\n    } catch (e) {\n      userId = $json.userId || \"\";\n    }\n\n    // 2. ดึงข้อมูลสภาพแวดล้อมและผล SERI จากโหนด Prepare AI Data\n    let prepData = {};\n    try {\n      prepData = $('Prepare AI Data').first()?.json || $json || {};\n    } catch (e) {\n      prepData = $json || {};\n    }\n\n    // 3. ดึงข้อความวิเคราะห์จาก AI (รองรับทั้ง Message a model4 และ Message a model)\n    let aiResponseText = \"ไม่มีข้อมูลคำแนะนำ\";\n    try {\n      aiResponseText = $json.text \n        || $json.content?.parts?.[0]?.text \n        || $(\"Message a model4\").first()?.json?.text \n        || $(\"Message a model4\").first()?.json?.content?.parts?.[0]?.text\n        || $(\"Message a model\").first()?.json?.text\n        || \"ไม่มีข้อมูลคำแนะนำ\";\n    } catch (e) {\n      aiResponseText = $json.text || \"ไม่มีข้อมูลคำแนะนำ\";\n    }\n\n    // 4. คำนวณสีแถบ Header ตามระดับความเสี่ยง SERI\n    let headerBgColor = \"#00B900\"; // เขียว (ต่ำ)\n    if (String(prepData.seriRiskLevel).includes('สูงมาก')) headerBgColor = \"#D32F2F\"; // แดง\n    else if (String(prepData.seriRiskLevel).includes('สูง')) headerBgColor = \"#E65100\"; // ส้ม\n    else if (String(prepData.seriRiskLevel).includes('ปานกลาง')) headerBgColor = \"#F57F17\"; // เหลืองส้ม\n\n    // 5. โครงสร้าง LINE Flex Message Card\n    const flexCard = {\n      \"type\": \"flex\",\n      \"altText\": `🌿 รายงานสุขภาพผิว (${prepData.locationName || 'สภาพอากาศวันนี้'})`,\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": headerBgColor,\n          \"paddingAll\": \"15px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"ENVIRONMENTAL SKIN ASSESSMENT\",\n              \"color\": \"#FFFFFF\",\n              \"weight\": \"bold\",\n              \"size\": \"xxs\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": `${prepData.seriRiskBadge || '🟢'} ความเสี่ยงผิว: ${prepData.seriRiskLevel || 'ปกติ'} (${prepData.seriScore || 0}/100)`,\n              \"color\": \"#FFFFFF\",\n              \"weight\": \"bold\",\n              \"size\": \"md\",\n              \"margin\": \"xs\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": `📍 ${prepData.locationName || 'พื้นที่ของคุณ'} | เวลา ${prepData.currentTimeStr || ''}`,\n              \"color\": \"#FFFFFFEE\",\n              \"size\": \"xs\",\n              \"margin\": \"xs\"\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"sm\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"🌡️ อุณหภูมิ\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.temp || 0}°C`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"☀️ ดัชนี UV\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.uvIndex || 0}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"😷 PM2.5\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.pm25 || 0}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                }\n              ]\n            },\n            { \"type\": \"separator\", \"margin\": \"md\" },\n            {\n              \"type\": \"text\",\n              \"text\": \"🧬 การวิเคราะห์และคำแนะนำสกินแคร์\",\n              \"weight\": \"bold\",\n              \"size\": \"xs\",\n              \"color\": \"#111111\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": String(aiResponseText),\n              \"wrap\": true,\n              \"size\": \"xs\",\n              \"color\": \"#444444\"\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"10px\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"secondary\",\n              \"height\": \"sm\",\n              \"action\": {\n                \"type\": \"message\",\n                \"label\": \"🧪 ขอคำแนะนำสกินแคร์รูทีน\",\n                \"text\": \"ขอแนะนำสกินแคร์รูทีน\"\n              }\n            }\n          ]\n        }\n      }\n    };\n\n    const messageList = [flexCard];\n\n    // 6. ส่งแบบ Reply หรือ Push ตามเงื่อนไข\n    return replyToken\n      ? { \"replyToken\": replyToken, \"messages\": messageList }\n      : { \"to\": userId, \"messages\": messageList };\n  })()\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2400,
+        -176
+      ],
+      "id": "2b81a36d-22c9-4b38-9d64-6ddaeeb9dbfa",
+      "name": "HTTP Request6"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "==[ข้อมูลสภาพแวดล้อม]\nพื้นที่: {{ $json.locationName }}\nเวลาปัจจุบัน: {{ $json.currentTimeStr }}\nอุณหภูมิ: {{ $json.temp }} °C | UV: {{ $json.uvIndex }} | PM2.5: {{ $json.pm25 }} µg/m³ | ความชื้น: {{ $json.humidity }}%\nแนวโน้มฝน: {{ $json.rainForecast4hText }}\nรายละเอียดฝนรายชั่วโมง:\n• {{ $json.hourlyDetailText }}\n\n[โครงสร้างการตอบกลับ]\n🌤️ รายงานสภาพอากาศวันนี้ {{ $json.locationName }} ({{ $json.currentTimeStr }})\n\n- อุณหภูมิ: {{ $json.temp }} °C\n- ดัชนี UV: {{ $json.uvIndex }}\n- ค่าฝุ่น PM2.5: {{ $json.pm25 }} µg/m³\n- ความชื้นสัมพัทธ์: {{ $json.humidity }}%\n\n☔ แนวโน้มฝนระยะสั้น:\n- {{ $json.rainForecast4hText }}\n- รายละเอียดรายชั่วโมง:\n  • {{ $json.hourlyDetailText }}\n\n💡 สิ่งที่ควรระวังและเตรียมตัววันนี้\n1. [ข้อแนะนำที่ 1 จากแนวโน้มฝนและสภาพอากาศข้างต้น]\n2. [ข้อแนะนำที่ 2 จากค่าฝุ่น PM2.5 และ UV]\n3. [ข้อแนะนำที่ 3 จากค่าความชื้นและอุณหภูมิ]"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        2048,
+        32
+      ],
+      "id": "15ac9b19-acd4-4d37-8c98-26cceb6a1020",
+      "name": "Message a model4",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yoNrsFnCBUoKDSra",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  (() => {\n    // 1. ดึง replyToken หรือ userId แบบป้องกัน Error ข้ามสายงาน\n    let replyToken = null;\n    try {\n      replyToken = $('LINE Webhook').first()?.json?.body?.events?.[0]?.replyToken;\n    } catch (e) {\n      replyToken = null;\n    }\n\n    let userId = \"\";\n    try {\n      userId = $(\"Code in JavaScript\").first()?.json?.userId \n            || $(\"Code in JavaScript1\").first()?.json?.userId \n            || $json.userId \n            || \"\";\n    } catch (e) {\n      userId = $json.userId || \"\";\n    }\n\n    // 2. ดึงข้อมูลสภาพแวดล้อมและผล SERI จากโหนด Prepare AI Data\n    let prepData = {};\n    try {\n      prepData = $('Prepare AI Data').first()?.json || $json || {};\n    } catch (e) {\n      prepData = $json || {};\n    }\n\n    // 3. ดึงข้อความวิเคราะห์จาก AI (รองรับทั้ง Message a model4 และ Message a model)\n    let aiResponseText = \"ไม่มีข้อมูลคำแนะนำ\";\n    try {\n      aiResponseText = $json.text \n        || $json.content?.parts?.[0]?.text \n        || $(\"Message a model4\").first()?.json?.text \n        || $(\"Message a model4\").first()?.json?.content?.parts?.[0]?.text\n        || $(\"Message a model\").first()?.json?.text\n        || \"ไม่มีข้อมูลคำแนะนำ\";\n    } catch (e) {\n      aiResponseText = $json.text || \"ไม่มีข้อมูลคำแนะนำ\";\n    }\n\n    // 4. คำนวณสีแถบ Header ตามระดับความเสี่ยง SERI\n    let headerBgColor = \"#00B900\"; // เขียว (ต่ำ)\n    if (String(prepData.seriRiskLevel).includes('สูงมาก')) headerBgColor = \"#D32F2F\"; // แดง\n    else if (String(prepData.seriRiskLevel).includes('สูง')) headerBgColor = \"#E65100\"; // ส้ม\n    else if (String(prepData.seriRiskLevel).includes('ปานกลาง')) headerBgColor = \"#F57F17\"; // เหลืองส้ม\n\n    // 5. โครงสร้าง LINE Flex Message Card\n    const flexCard = {\n      \"type\": \"flex\",\n      \"altText\": `🌿 รายงานสุขภาพผิว (${prepData.locationName || 'สภาพอากาศวันนี้'})`,\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": headerBgColor,\n          \"paddingAll\": \"15px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"ENVIRONMENTAL SKIN ASSESSMENT\",\n              \"color\": \"#FFFFFF\",\n              \"weight\": \"bold\",\n              \"size\": \"xxs\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": `${prepData.seriRiskBadge || '🟢'} ความเสี่ยงผิว: ${prepData.seriRiskLevel || 'ปกติ'} (${prepData.seriScore || 0}/100)`,\n              \"color\": \"#FFFFFF\",\n              \"weight\": \"bold\",\n              \"size\": \"md\",\n              \"margin\": \"xs\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": `📍 ${prepData.locationName || 'พื้นที่ของคุณ'} | เวลา ${prepData.currentTimeStr || ''}`,\n              \"color\": \"#FFFFFFEE\",\n              \"size\": \"xs\",\n              \"margin\": \"xs\"\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"sm\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"🌡️ อุณหภูมิ\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.temp || 0}°C`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"☀️ ดัชนี UV\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.uvIndex || 0}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"md\",\n                  \"paddingAll\": \"8px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"😷 PM2.5\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${prepData.pm25 || 0}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" }\n                  ]\n                }\n              ]\n            },\n            { \"type\": \"separator\", \"margin\": \"md\" },\n            {\n              \"type\": \"text\",\n              \"text\": \"🧬 การวิเคราะห์และคำแนะนำสกินแคร์\",\n              \"weight\": \"bold\",\n              \"size\": \"xs\",\n              \"color\": \"#111111\"\n            },\n            {\n              \"type\": \"text\",\n              \"text\": String(aiResponseText),\n              \"wrap\": true,\n              \"size\": \"xs\",\n              \"color\": \"#444444\"\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"10px\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"secondary\",\n              \"height\": \"sm\",\n              \"action\": {\n                \"type\": \"message\",\n                \"label\": \"🧪 ขอคำแนะนำสกินแคร์รูทีน\",\n                \"text\": \"ขอแนะนำสกินแคร์รูทีน\"\n              }\n            }\n          ]\n        }\n      }\n    };\n\n    const messageList = [flexCard];\n\n    // 6. ส่งแบบ Reply หรือ Push ตามเงื่อนไข\n    return replyToken\n      ? { \"replyToken\": replyToken, \"messages\": messageList }\n      : { \"to\": userId, \"messages\": messageList };\n  })()\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2416,
+        48
+      ],
+      "id": "ffb2ad41-d7cf-4b6b-9f99-937bc147c695",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=[ข้อมูลผู้ใช้งาน]\nชื่อ: {{ $json.name }}\nประเภทผิว: {{ $json.skinType }}\nปัญหาผิวหลัก: {{ $json.skinConcern }}\nผิวแพ้ง่าย: {{ $json.isSensitive }}\nประวัติการแพ้/ระวัง: {{ $json.allergies }}\n\n[ข้อมูลสภาพแวดล้อมและประเมินความเสี่ยง]\nเวลาปัจจุบัน: {{ $json.currentTimeStr }}\nโหมดการดูแล: {{ $json.timeMode || 'DAY MODE' }}\nอุณหภูมิ: {{ $json.temp }} °C | UV: {{ $json.uvIndex }} | PM2.5: {{ $json.pm25 }} µg/m³ | ความชื้น: {{ $json.humidity }}%\nดัชนีความเสี่ยงผิว (SERI Score): {{ $json.seriScore }}/100 (ระดับ {{ $json.seriRiskLevel }})\n\n[กฎเหล็กการจัดรูทีน]\n1. หากโหมดการดูแลเป็น DAY MODE ต้องแนะนำ Sunscreen (ครีมกันแดด) ในขั้นตอนที่ 4 เสมอ\n2. หากโหมดการดูแลเป็น NIGHT MODE ให้ตัดขั้นตอน Sunscreen ออก และเน้นการฟื้นฟูผิวคืนนี้\n\n[กฎการแนะนำผลิตภัณฑ์]\n1. ให้ระบุ Active Ingredient หลักก่อนเสมอ\n2. ยกตัวอย่างผลิตภัณฑ์ในท้องตลาดที่หาง่าย 1–3 ตัวอย่าง (ระบุชัดเจนว่าเป็นเพียงตัวอย่างเพื่อการตัดสินใจ ไม่ใช่การโฆษณา)\n3. เช็คประวัติการแพ้ของผู้ใช้ ({{ $json.allergies }}) ก่อนเสนอแบรนด์เสมอ หากแบรนด์นั้นมีส่วนผสมที่ผู้ใช้แพ้ ห้ามแนะนำเด็ดขาด\n\n[โครงสร้างการตอบกลับ]\n🧪 คำแนะนำสกินแคร์เฉพาะบุคคล สำหรับคุณ {{ $json.name }} ({{ $json.timeMode || 'DAY MODE' }})\n\n📋 โปรไฟล์ผิวของคุณ\n- ประเภทผิว: {{ $json.skinType }}\n- ปัญหาผิวหลัก: {{ $json.skinConcern }}\n- สภาพผิว/ความไว: {{ $json.isSensitive }}\n- ประวัติการแพ้: {{ $json.allergies }}\n\n🧪 Active Ingredients ฮีโร่แนะนำวันนี้ (เลือก 3 ตัว)\n\n1. [ชื่อภาษาอังกฤษ] ([ชื่อภาษาไทย])\n- ความเข้มข้นทั่วไป: [ระบุช่วง %]\n- กลไกการทำงาน: [อธิบายสั้นๆ 1 บรรทัด]\n- เหตุผลที่เหมาะกับคุณ: [เชื่อมโยงกับสภาพผิวและค่า SERI Score ณ ตอนนี้ 1 บรรทัด]\n- ตัวอย่างผลิตภัณฑ์ในท้องตลาด: [ระบุ 1-2 แบรนด์ที่หาง่าย เช่น แบรนด์ A, แบรนด์ B]\n\n2. [ชื่อภาษาอังกฤษ] ([ชื่อภาษาไทย])\n- ความเข้มข้นทั่วไป: [ระบุช่วง %]\n- กลไกการทำงาน: [อธิบายสั้นๆ 1 บรรทัด]\n- เหตุผลที่เหมาะกับคุณ: [เชื่อมโยงสั้นๆ 1 บรรทัด]\n- ตัวอย่างผลิตภัณฑ์ในท้องตลาด: [ระบุ 1-2 แบรนด์ที่หาง่าย]\n\n3. [ชื่อภาษาอังกฤษ] ([ชื่อภาษาไทย])\n- ความเข้มข้นทั่วไป: [ระบุช่วง %]\n- กลไกการทำงาน: [อธิบายสั้นๆ 1 บรรทัด]\n- เหตุผลที่เหมาะกับคุณ: [เชื่อมโยงสั้นๆ 1 บรรทัด]\n- ตัวอย่างผลิตภัณฑ์ในท้องตลาด: [ระบุ 1-2 แบรนด์ที่หาง่าย]\n\n⚠️ สารสกัดที่ควรเว้น/ระวังวันนี้\n- [ระบุชื่อและเหตุผล หรือระบุว่า \"สามารถใช้สกินแคร์ตัวประจำได้ตามปกติ\"]\n\n✨ ลำดับการลงสกินแคร์ที่แนะนำ ({{ $json.timeMode || 'DAY MODE' }})\n1. Cleansing: [คำแนะนำสั้นๆ] (ตัวอย่าง: [ระบุแบรนด์ 1 ตัวอย่าง])\n2. Serum / Treatment: [คำแนะนำการลง Active] (ตัวอย่าง: [ระบุแบรนด์ 1 ตัวอย่าง])\n3. Moisturizer: [คำแนะนำเลือกล็อกความชุ่มชื้น] (ตัวอย่าง: [ระบุแบรนด์ 1 ตัวอย่าง])\n4. Sunscreen: [แสดงข้อนี้เฉพาะเมื่อเป็น DAY MODE เท่านั้น] (ตัวอย่าง: [ระบุแบรนด์ 1 ตัวอย่าง])\n\n🌤️ เป้าหมายการดูแลผิววันนี้\n[สรุปเป้าหมายหลัก 1 ประโยค]\n\n⚠️ หมายเหตุ: รายชื่อผลิตภัณฑ์ข้างต้นเป็นเพียงตัวอย่างในท้องตลาดเพื่อประกอบการตัดสินใจ ไม่ใช่การรับรองทางการแพทย์หรือการโฆษณา ควรทดสอบการแพ้ (Patch Test) ก่อนใช้จริง"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        2048,
+        -192
+      ],
+      "id": "b535f221-40e5-433d-bcd2-9152c22c17b5",
+      "name": "Message a model1",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "maxTries": 3,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yoNrsFnCBUoKDSra",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI",
+          "mode": "list",
+          "cachedResultName": "สำหรับเก็บบันทึกประวัติ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TestCase_ID": "={{ 'TC-DAY-' + Date.now().toString().slice(-4) }}",
+            "User_Message": "={{ $('Prepare AI Data').first()?.json?.userMessage || '' }}",
+            "Response_Time_Sec": "={{ Math.max(0.8, Number(((Date.now() - ($('LINE Webhook').first()?.json?.body?.events?.[0]?.timestamp || $('Edit Fields').first()?.json?.startTime || Date.now())) / 1000).toFixed(2))) }}",
+            "Actual_Mode": "={{ $('Prepare AI Data').first()?.json?.systemMode }}",
+            "Skin_Type": "={{ $('Prepare AI Data').first()?.json?.skinType }}",
+            "Is_Sensitive": "={{ $('Prepare AI Data').first()?.json?.allergies }}",
+            "UV_Index": "={{ $('Prepare AI Data').first()?.json?.uvIndex }}",
+            "PM25": "={{ $('Prepare AI Data').first()?.json?.pm25 }}",
+            "Rain_Prob_Max": "={{ $('Prepare AI Data').first()?.json?.maxRainProb4h }}",
+            "AI_Response_Text": "={{ $('Message a model').first()?.json?.content?.parts?.[0]?.text || $('Message a model').first()?.json?.message?.text || '' }}",
+            "Date_Time": "={{ $('Prepare AI Data').first()?.json?.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TestCase_ID",
+              "displayName": "TestCase_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date_Time",
+              "displayName": "Date_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "User_Message",
+              "displayName": "User_Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Skin_Type",
+              "displayName": "Skin_Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Is_Sensitive",
+              "displayName": "Is_Sensitive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UV_Index",
+              "displayName": "UV_Index",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PM25",
+              "displayName": "PM25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Rain_Prob_Max",
+              "displayName": "Rain_Prob_Max",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Actual_Mode",
+              "displayName": "Actual_Mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Response_Time_Sec",
+              "displayName": "Response_Time_Sec",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI_Response_Text",
+              "displayName": "AI_Response_Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2624,
+        -352
+      ],
+      "id": "1d813408-f4fc-4a60-9519-a7fc60e7035c",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI",
+          "mode": "list",
+          "cachedResultName": "สำหรับเก็บบันทึกประวัติ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 231476516,
+          "mode": "list",
+          "cachedResultName": "2_SKINCARE_ROUTINE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI/edit#gid=231476516"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TestCase_ID": "={{ 'TC-ROUTINE-' + Date.now().toString().slice(-4) }}",
+            "User_Message": "={{ $('Prepare AI Data').first()?.json?.userMessage || '' }}",
+            "Actual_Mode": "={{ $('Prepare AI Data').first()?.json?.systemMode }}",
+            "Response_Time_Sec": "={{ Math.max(0.8, Number(((Date.now() - ($('LINE Webhook').first()?.json?.body?.events?.[0]?.timestamp || $('Edit Fields').first()?.json?.startTime || Date.now())) / 1000).toFixed(2))) }}",
+            "Skin_Type": "={{ $('Prepare AI Data').first()?.json?.skinType }}",
+            "Allergies": "={{ $('Prepare AI Data').first()?.json?.allergies }}",
+            "AI_Response_Text": "={{ $('Message a model1').first()?.json?.content?.parts?.[0]?.text || '' }}",
+            "Date_Time": "={{ $('Prepare AI Data').first()?.json?.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TestCase_ID",
+              "displayName": "TestCase_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date_Time",
+              "displayName": "Date_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "User_Message",
+              "displayName": "User_Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Skin_Type",
+              "displayName": "Skin_Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Allergies",
+              "displayName": "Allergies",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Actual_Mode",
+              "displayName": "Actual_Mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Response_Time_Sec",
+              "displayName": "Response_Time_Sec",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI_Response_Text",
+              "displayName": "AI_Response_Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2640,
+        -128
+      ],
+      "id": "dc73b3c9-41ba-46f6-b31d-764d23ed16a7",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI",
+          "mode": "list",
+          "cachedResultName": "สำหรับเก็บบันทึกประวัติ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1441751094,
+          "mode": "list",
+          "cachedResultName": "3_WEATHER_ONLY",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lySmvPUQp-xe-vF66hbLyjff0VbBLFD0ySfkVVrPDVI/edit#gid=1441751094"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TestCase_ID": "={{ 'TC-WX-' + Date.now().toString().slice(-4) }}",
+            "User_Message": "={{ $('Prepare AI Data').first()?.json?.userMessage || '' }}",
+            "Actual_Mode": "={{ $('Prepare AI Data').first()?.json?.systemMode }}",
+            "Response_Time_Sec": "={{ Math.max(0.8, Number(((Date.now() - ($('LINE Webhook').first()?.json?.body?.events?.[0]?.timestamp || $('Edit Fields').first()?.json?.startTime || Date.now())) / 1000).toFixed(2))) }}",
+            "Max_Rain_Prob": "={{ $('Prepare AI Data').first()?.json?.maxRainProb4h }}",
+            "UV_Index": "={{ $('Prepare AI Data').first()?.json?.uvIndex }}",
+            "PM25": "={{ $('Prepare AI Data').first()?.json?.pm25 }}",
+            "Rain_Prob_Max": "={{ $('Prepare AI Data').first()?.json?.maxRainProb4h }}",
+            "AI_Response_Text": "={{ $('Message a model4').first()?.json?.content?.parts?.[0]?.text || '' }}",
+            "Date_Time": "={{ $('Prepare AI Data').first()?.json?.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TestCase_ID",
+              "displayName": "TestCase_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "User_Message",
+              "displayName": "User_Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date_Time",
+              "displayName": "Date_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UV_Index",
+              "displayName": "UV_Index",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "PM25",
+              "displayName": "PM25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Rain_Prob_Max",
+              "displayName": "Rain_Prob_Max",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Max_Rain_Prob",
+              "displayName": "Max_Rain_Prob",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Actual_Mode",
+              "displayName": "Actual_Mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Response_Time_Sec",
+              "displayName": "Response_Time_Sec",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI_Response_Text",
+              "displayName": "AI_Response_Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2656,
+        96
+      ],
+      "id": "60d3881a-263b-4844-b872-cf02cc60565a",
+      "name": "Append row in sheet2",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xM8OKHgS8l18ezUmK0m2iTh0SxMZuUleqNNkB819fBk",
+          "mode": "list",
+          "cachedResultName": "DATA_AUDIT",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xM8OKHgS8l18ezUmK0m2iTh0SxMZuUleqNNkB819fBk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "ข้อมูลดิบจาก API (Raw Data)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xM8OKHgS8l18ezUmK0m2iTh0SxMZuUleqNNkB819fBk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TestCase_ID": "={{ $json.userId + '_' + $json.timestamp }}",
+            "Weather_Raw_Time": "={{ $('Prepare AI Data').first().json.raw_weather_time }}",
+            "AirQuality_Raw_Time": "={{ $('Prepare AI Data').first().json.raw_air_time }}",
+            "Raw_Temp": "={{ $('Prepare AI Data').first().json.raw_temp }}",
+            "Raw_Humidity": "={{ $('Prepare AI Data').first().json.raw_humidity }}",
+            "Raw_UVIndex": "={{ $('Prepare AI Data').first().json.raw_uv }}",
+            "Raw_PM25": "={{ $('Prepare AI Data').first().json.raw_pm25 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TestCase_ID",
+              "displayName": "TestCase_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Weather_Raw_Time",
+              "displayName": "Weather_Raw_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AirQuality_Raw_Time",
+              "displayName": "AirQuality_Raw_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Raw_Temp",
+              "displayName": "Raw_Temp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Raw_Humidity",
+              "displayName": "Raw_Humidity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Raw_UVIndex",
+              "displayName": "Raw_UVIndex",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Raw_PM25",
+              "displayName": "Raw_PM25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1760,
+        -832
+      ],
+      "id": "17ce6e5a-8488-48e6-9f10-1410552e2aff",
+      "name": "DATA_AUDIT",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1xM8OKHgS8l18ezUmK0m2iTh0SxMZuUleqNNkB819fBk",
+          "mode": "list",
+          "cachedResultName": "DATA_AUDIT",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xM8OKHgS8l18ezUmK0m2iTh0SxMZuUleqNNkB819fBk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 204039417,
+          "mode": "list",
+          "cachedResultName": "ข้อมูลหลังผ่าน Node (Prepared Data)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xM8OKHgS8l18ezUmK0m2iTh0SxMZuUleqNNkB819fBk/edit#gid=204039417"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Prep_Timestamp": "={{ $('Prepare AI Data').first().json.timestamp }}",
+            "Prep_Temp": "={{ $('Prepare AI Data').first().json.temp }}",
+            "Prep_Humidity": "={{ $('Prepare AI Data').first().json.humidity }}",
+            "Prep_UVIndex": "={{ $('Prepare AI Data').first().json.uvIndex }}",
+            "Prep_PM25": "={{ $('Prepare AI Data').first().json.pm25 }}",
+            "Prep_RainForecastText": "={{ $('Prepare AI Data').first().json.rainForecast4hText }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Prep_Timestamp",
+              "displayName": "Prep_Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prep_Temp",
+              "displayName": "Prep_Temp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prep_Humidity",
+              "displayName": "Prep_Humidity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prep_UVIndex",
+              "displayName": "Prep_UVIndex",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prep_PM25",
+              "displayName": "Prep_PM25",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Prep_RainForecastText",
+              "displayName": "Prep_RainForecastText",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        -1040
+      ],
+      "id": "e5b50d99-4ad5-4901-a09e-c22184284081",
+      "name": "DATA_AUDIT1",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  (() => {\n    // 1. ดึง replyToken หรือ userId\n    const replyToken = $('LINE Webhook').item?.json?.body?.events?.[0]?.replyToken;\n    const userId = $('Code in JavaScript').item?.json?.userId || $json.userId || \"\";\n    \n    // 2. ดึงข้อความแจ้งเตือน Fallback\n    const fallbackMessage = $json.fallbackText || \"ขออภัยครับ ระบบรองรับเฉพาะการประเมินสภาพอากาศและความเสี่ยงผิวเท่านั้นครับ\";\n\n    // 3. โครงสร้างข้อความ Quick Reply\n    const messageObject = {\n      \"type\": \"text\",\n      \"text\": fallbackMessage,\n      \"quickReply\": {\n        \"items\": [\n          {\n            \"type\": \"action\",\n            \"action\": { \"type\": \"message\", \"label\": \"☀️ เช็คสภาพอากาศ\", \"text\": \"เช็คสภาพอากาศ\" }\n          },\n          {\n            \"type\": \"action\",\n            \"action\": { \"type\": \"message\", \"label\": \"🧪 แนะนำสกินแคร์\", \"text\": \"ขอคำแนะนำสกินแคร์\" }\n          },\n          {\n            \"type\": \"action\",\n            \"action\": { \"type\": \"message\", \"label\": \"🌿 ประเมินความเสี่ยงผิว\", \"text\": \"รายงานสภาพผิว\" }\n          }\n        ]\n      }\n    };\n\n    // 4. ส่งกลับเป็น Object ให้ n8n จัดการแปลงเป็น JSON สุทธิให้อัตโนมัติ\n    return replyToken\n      ? { \"replyToken\": replyToken, \"messages\": [messageObject] }\n      : { \"to\": userId, \"messages\": [messageObject] };\n  })()\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1856,
+        272
+      ],
+      "id": "a06cb93b-9074-4693-b46a-1c6ebd7326e3",
+      "name": "HTTP Request8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  (() => {\n    const replyToken = $('LINE Webhook').item?.json?.body?.events?.[0]?.replyToken;\n    const userId = $('Code in JavaScript').item?.json?.userId || $json.userId || \"\";\n\n    const name = $json.name || \"คุณลูกค้า\";\n    const skinType = $json.skinType || \"ธรรมดา\";\n    const isSensitive = $json.isSensitive || \"แข็งแรง\";\n    const allergies = $json.allergies || \"ไม่แพ้\";\n    const seriScore = $json.seriScore || 0;\n    const seriRiskLevel = $json.seriRiskLevel || \"ปกติ\";\n    const seriRiskBadge = $json.seriRiskBadge || \"🟢\";\n    const uvIndex = $json.uvIndex || 0;\n    const pm25 = $json.pm25 || 0;\n    const temp = $json.temp || 0;\n    const humidity = $json.humidity || 0;\n    const locationName = $json.locationName || \"มหาสารคาม\";\n    const timeStr = $json.currentTimeStr || \"\";\n\n    // กำหนดสีแถบตามความเสี่ยง SERI\n    let headerColor = \"#0288D1\"; // ฟ้า\n    if (seriScore >= 81) headerColor = \"#D32F2F\";\n    else if (seriScore >= 61) headerColor = \"#E65100\";\n    else if (seriScore >= 31) headerColor = \"#F57F17\";\n\n    const dashboardCard = {\n      \"type\": \"flex\",\n      \"altText\": `📊 แดชบอร์ดประวัติสุขภาพผิวของคุณ ${name}`,\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": headerColor,\n          \"paddingAll\": \"15px\",\n          \"contents\": [\n            { \"type\": \"text\", \"text\": \"PERSONAL SKIN & ENVIRONMENT DASHBOARD\", \"color\": \"#FFFFFF\", \"weight\": \"bold\", \"size\": \"xxs\" },\n            { \"type\": \"text\", \"text\": `📊 สรุปประวัติผิว: คุณ ${name}`, \"color\": \"#FFFFFF\", \"weight\": \"bold\", \"size\": \"md\", \"margin\": \"xs\" },\n            { \"type\": \"text\", \"text\": `📍 ${locationName} | ข้อมูล ณ เวลา ${timeStr}`, \"color\": \"#FFFFFFEE\", \"size\": \"xs\", \"margin\": \"xs\" }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"👤 โปรไฟล์ผิวส่วนบุคคล (Skin Profile)\",\n              \"weight\": \"bold\",\n              \"size\": \"xs\",\n              \"color\": \"#111111\"\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"backgroundColor\": \"#F8F9FA\",\n              \"cornerRadius\": \"md\",\n              \"paddingAll\": \"10px\",\n              \"spacing\": \"xs\",\n              \"contents\": [\n                { \"type\": \"text\", \"text\": `• ประเภทผิว: ${skinType}`, \"size\": \"xs\", \"color\": \"#333333\" },\n                { \"type\": \"text\", \"text\": `• สภาพความไวผิว: ${isSensitive}`, \"size\": \"xs\", \"color\": \"#333333\" },\n                { \"type\": \"text\", \"text\": `• ประวัติอาการแพ้: ${allergies}`, \"size\": \"xs\", \"color\": \"#333333\" }\n              ]\n            },\n            { \"type\": \"separator\", \"margin\": \"sm\" },\n            {\n              \"type\": \"text\",\n              \"text\": \"🔬 ดัชนีความเสี่ยงผิวปัจจุบัน (SERI Index)\",\n              \"weight\": \"bold\",\n              \"size\": \"xs\",\n              \"color\": \"#111111\"\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"backgroundColor\": \"#FFF8E1\",\n              \"cornerRadius\": \"md\",\n              \"paddingAll\": \"10px\",\n              \"alignItems\": \"center\",\n              \"contents\": [\n                { \"type\": \"text\", \"text\": `${seriRiskBadge}`, \"size\": \"xl\", \"flex\": 1 },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 5,\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": `ระดับความเสี่ยง: ${seriRiskLevel}`, \"size\": \"xs\", \"weight\": \"bold\", \"color\": \"#222222\" },\n                    { \"type\": \"text\", \"text\": `คะแนนความเสี่ยง SERI: ${seriScore} / 100`, \"size\": \"xxs\", \"color\": \"#666666\" }\n                  ]\n                }\n              ]\n            },\n            { \"type\": \"separator\", \"margin\": \"sm\" },\n            {\n              \"type\": \"text\",\n              \"text\": \"🌤️ สภาพแวดล้อมรอบตัว (Environmental Metrics)\",\n              \"weight\": \"bold\",\n              \"size\": \"xs\",\n              \"color\": \"#111111\"\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"horizontal\",\n              \"spacing\": \"xs\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"sm\",\n                  \"paddingAll\": \"6px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"☀️ UV\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${uvIndex}`, \"size\": \"xs\", \"weight\": \"bold\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"sm\",\n                  \"paddingAll\": \"6px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"😷 PM2.5\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${pm25}`, \"size\": \"xs\", \"weight\": \"bold\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"sm\",\n                  \"paddingAll\": \"6px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"🌡️ อุณหภูมิ\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${temp}°C`, \"size\": \"xs\", \"weight\": \"bold\" }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"vertical\",\n                  \"flex\": 1,\n                  \"backgroundColor\": \"#F4F5F7\",\n                  \"cornerRadius\": \"sm\",\n                  \"paddingAll\": \"6px\",\n                  \"alignItems\": \"center\",\n                  \"contents\": [\n                    { \"type\": \"text\", \"text\": \"💧 ความชื้น\", \"size\": \"xxs\", \"color\": \"#777777\" },\n                    { \"type\": \"text\", \"text\": `${humidity}%`, \"size\": \"xs\", \"weight\": \"bold\" }\n                  ]\n                }\n              ]\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"10px\",\n          \"spacing\": \"xs\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"style\": \"primary\",\n              \"color\": \"#0288D1\",\n              \"height\": \"sm\",\n              \"action\": {\n                \"type\": \"message\",\n                \"label\": \"🧪 ขอคำแนะนำสกินแคร์รูทีน\",\n                \"text\": \"ขอคำแนะนำสกินแคร์\"\n              }\n            }\n          ]\n        }\n      }\n    };\n\n    const payload = replyToken\n      ? { \"replyToken\": replyToken, \"messages\": [dashboardCard] }\n      : { \"to\": userId, \"messages\": [dashboardCard] };\n\n    return JSON.stringify(payload);\n  })()\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1904,
+        -560
+      ],
+      "id": "fa787a21-fd54-41de-bf92-bad1db5f6a21",
+      "name": "HTTP Request9"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "LINE Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "User Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Exists?": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Data": {
+      "main": [
+        [
+          {
+            "node": "DATA_AUDIT",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DATA_AUDIT1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weather": {
+      "main": [
+        [
+          {
+            "node": "Get Air Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Air Quality": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request6": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "11e7248c-d72a-41fe-83cf-47a34b6377d9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e75834c59b209709c948ea06b7738eb7a2c91085970f371d4bf8179f6f71aba6"
+  },
+  "nodeGroups": [],
+  "id": "SsMjAQkAKJ6nAh7W",
+  "tags": []
+}

@@ -1,0 +1,468 @@
+{
+  "name": "My workflow แจ้งเตือน",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "234fc2b4-4511-4c68-af47-e96e1ef2dd3a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw",
+          "mode": "list",
+          "cachedResultName": "SkinCare_Automation_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1733221880,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit#gid=1733221880"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -160
+      ],
+      "id": "052bb8d3-9def-4f53-b49e-8b3e763fc540",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "01ed42ab-b337-4ecb-9c60-1c430939554c",
+              "leftValue": "=={{ $json['LINE User ID'] || $json['userId'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        -160
+      ],
+      "id": "a5abf94b-b9af-415c-b6ac-e556aa0f1f6b",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    userId: $json['LINE User ID'] || $json['userId'] || '',\n    name: $json['ชื่อ-นามสกุล หรือ ชื่อเล่น'] || $json['ชื่อ'] || 'คุณลูกค้า',\n    skinType: $json['สภาพผิว'] || 'ธรรมดา',\n    isSensitive: $json['สุขภาพผิว'] || 'แข็งแรง',\n    allergies: $json['แพ้น้ำหอมหรือไม่'] || 'ไม่แพ้',\n    province: $json['จังหวัด'] || 'มหาสารคาม',\n    latitude: $json['latitude'] || 16.18,\n    longitude: $json['longitude'] || 103.30\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -160
+      ],
+      "id": "9c6833a9-1b62-4398-8274-b8b97c60e32f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{ $node['Code in JavaScript'].json.lat }}&longitude={{ $node['Code in JavaScript'].json.lon }}&current=temperature_2m,relative_humidity_2m,weather_code,rain,precipitation_probability&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,rain,weather_code&daily=precipitation_probability_max,rain_sum&timezone=Asia%2FBangkok&forecast_days=2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-skincare-bot/1.0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        -464
+      ],
+      "id": "ad79ed51-8d0d-4fe3-a32c-56f2e2c40c69",
+      "name": "Get Weather"
+    },
+    {
+      "parameters": {
+        "url": "=https://air-quality-api.open-meteo.com/v1/air-quality?latitude={{ $('Code in JavaScript').item.json.lat }}&longitude={{ $('Code in JavaScript').item.json.lon }}&current=pm2_5,uv_index&timezone=Asia/Bangkok",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n-skincare-bot/1.0"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        -464
+      ],
+      "id": "38b8bd80-57b3-4e98-9b7b-6c8551d67f3c",
+      "name": "Get Air Quality"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userProfile = $(\"Code in JavaScript\").item.json;\nconst weather = $(\"Get Weather\").item.json;\nconst air = $(\"Get Air Quality\").item.json;\n\n// ดึงสภาพแวดล้อม\nconst temp = Math.round(weather.current?.temperature_2m ?? 30);\nconst humidity = Math.round(weather.current?.relative_humidity_2m ?? 65);\nconst uvIndex = air.current?.uv_index ?? 0;\nconst pm25 = air.current?.pm2_5 ?? 0;\n\n// คำนวณ SERI Score\nconst uvScore = Math.min((uvIndex / 11) * 40, 40);\nconst pm25Score = Math.min((pm25 / 50) * 30, 30);\n\nlet tempScore = temp >= 35 ? 15 : temp >= 32 ? 12 : 8;\nlet humiScore = (humidity > 80 || humidity < 35) ? 15 : 10;\nlet climateScore = tempScore + humiScore;\n\nlet baseScore = uvScore + pm25Score + climateScore;\nlet multiplier = userProfile.isSensitive.includes('แพ้ง่าย') ? 1.20 : 1.0;\nconst seriScore = Math.min(100, Math.round(baseScore * multiplier));\n\nlet riskLevel = seriScore >= 81 ? 'สูงมาก 🔴' : seriScore >= 61 ? 'สูง 🟠' : seriScore >= 31 ? 'ปานกลาง 🟡' : 'ต่ำ 🟢';\n\n// สร้าง Prompt สำหรับ Gemini\nconst promptText = `คุณคือ AI ผู้เชี่ยวชาญด้านสกินแคร์ประจำแบรนด์ SUN & SKIN\nกรุณาแต่งข้อความการแจ้งเตือนพยากรณ์ความเสี่ยงผิวประจำวัน (Daily Skin Alert) สำหรับส่ง LINE Push Message\n\n[ข้อมูลผู้ใช้]\nชื่อ: ${userProfile.name}\nประเภทผิว: ${userProfile.skinType}\nความไวผิว: ${userProfile.isSensitive}\nประวัติแพ้: ${userProfile.allergies}\n\n[สภาพแวดล้อมวันนี้]\nจังหวัด: ${userProfile.province}\nอุณหภูมิ: ${temp}°C | ความชื้น: ${humidity}% | UV Index: ${uvIndex} | PM2.5: ${pm25} µg/m³\nดัชนีความเสี่ยงผิว SERI Score: ${seriScore}/100 (${riskLevel})\n\n[เงื่อนไขการสร้างข้อความ]\n1. ทักทายยามเช้าแบบเป็นกันเอง ใส่ความใส่ใจ\n2. แจ้งเตือนระดับความเสี่ยง SERI Score สั้นๆ 1-2 ประโยค\n3. ให้คำแนะนำการดูแลผิวประจำวัน 2-3 ข้อ (เช่น เน้นกันแดด, เติมความชุ่มชื้น, ล้างฝุ่น PM2.5)\n4. ความยาวรวมไม่เกิน 4-5 บรรทัด อ่านง่ายบนมือถือ`;\n\nreturn [{\n  json: {\n    userId: userProfile.userId,\n    name: userProfile.name,\n    seriScore: seriScore,\n    riskLevel: riskLevel,\n    temp: temp,\n    uvIndex: uvIndex,\n    pm25: pm25,\n    promptText: promptText\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -160
+      ],
+      "id": "bd332b1f-79f7-4d16-8665-d974802814c8",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        -160
+      ],
+      "id": "600a48b9-0da2-47c4-91cb-55c8a4d75cdc",
+      "name": "Wait",
+      "webhookId": "47d184c1-04e1-4703-b0ff-948df0e739a7"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.promptText }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2,
+          "topP": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        -352
+      ],
+      "id": "9ed365d3-5647-4192-bbca-a7ff27aea5fe",
+      "name": "Message a model4",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "maxTries": 3,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yoNrsFnCBUoKDSra",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/reply",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer Zjpl07QI7SLGZPn+/rvbyKrqCIYXF0UlqlW7GCY7XVeB/9WGvPwlJBaKTHgr7z633XGqhgtjioCNxgqCQtb5X5NIUAMWcuX574E1xUN7tBPYEtSc/EDQH6QPfs/+ZRugNEN+CQsUP5nbpCSEfPL2FgdB04t89/1O/w1cDnyilFU="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"to\": String(\n      $(\"Code in JavaScript\").item.json.userId ||\n      $(\"Code in JavaScript1\").item.json.userId ||\n      $(\"Get row(s) in sheet\").item.json['LINE User ID'] ||\n      $json.userId ||\n      \"\"\n    ).trim(),\n    \"messages\": [\n      {\n        \"type\": \"text\",\n        \"text\": String(\n          $json.text ||\n          $json.output ||\n          $json.content ||\n          $(\"Message a model4\").item.json.text ||\n          \"สวัสดีค่ะ รายงานสภาพผิวประจำวันพร้อมให้บริการแล้วค่ะ\"\n        ).trim(),\n        \"quickReply\": {\n          \"items\": [\n            {\n              \"type\": \"action\",\n              \"action\": { \"type\": \"message\", \"label\": \"🧪 คำแนะนำสกินแคร์\", \"text\": \"ขอคำแนะนำสกินแคร์\" }\n            },\n            {\n              \"type\": \"action\",\n              \"action\": { \"type\": \"message\", \"label\": \"📊 ดูแดชบอร์ดผิว\", \"text\": \"ดูแดชบอร์ดประวัติผิว\" }\n            }\n          ]\n        }\n      }\n    ]\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2160,
+        -352
+      ],
+      "id": "c0ac8e38-d1f9-4b62-897a-e1c8e333f4dc",
+      "name": "HTTP Request7"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw",
+          "mode": "list",
+          "cachedResultName": "SkinCare_Automation_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Push_Audit_Logs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1uAsRBFbcJa9f7a1oUzHOZ-lpdT9GrF5kWvihTR46Udw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toISOString() }}",
+            "User ID": "={{ $json.userId }}",
+            "Name": "={{ $json.name }}",
+            "SERI Score": "={{ $json.seriScore }}",
+            "Status": "SUCCESS"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "User ID",
+              "displayName": "User ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SERI Score",
+              "displayName": "SERI Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2384,
+        -352
+      ],
+      "id": "e7da54dd-2c66-4f95-af96-3933a414a6a5",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "0CNDjWYskftw5THS",
+          "name": "Google Service Account account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weather": {
+      "main": [
+        [
+          {
+            "node": "Get Air Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Air Quality": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Message a model4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request7": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0a12530a-4130-459f-854f-fe45398c1a1c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e75834c59b209709c948ea06b7738eb7a2c91085970f371d4bf8179f6f71aba6"
+  },
+  "nodeGroups": [],
+  "id": "wsMO6YQo3DWipUTd",
+  "tags": []
+}
